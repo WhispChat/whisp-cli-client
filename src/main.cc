@@ -25,7 +25,6 @@ void prompt_user_input(int sock_fd) {
   std::string input;
 
   while (1) {
-    std::cout << "[message]: ";
     std::getline(std::cin, input);
 
     send(sock_fd, input.data(), input.size(), 0);
