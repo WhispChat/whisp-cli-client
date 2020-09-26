@@ -15,9 +15,9 @@ void read_server(int sock_fd) {
 
   while (1) {
     // TODO: more C++ way of reading to buffer using iostream?
-    bzero(buffer, sizeof buffer);
     read(sock_fd, buffer, sizeof buffer);
     std::cout << buffer << std::endl;
+    bzero(buffer, sizeof buffer);
   }
 }
 
