@@ -33,7 +33,7 @@ void prompt_user_input(int sock_fd) {
 }
 
 int main(int argc, char **argv) {
-  int sock_fd, valread;
+  int sock_fd;
   struct sockaddr_in serv_addr;
 
   if ((sock_fd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
