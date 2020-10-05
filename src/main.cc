@@ -6,6 +6,8 @@
 #include <thread>
 #include <unistd.h>
 
+#include "whisp-cli/encryption.h"
+
 // TODO: make configurable
 const int SERVER_PORT = 8080;
 const std::string SERVER_HOST = "0.0.0.0";
@@ -16,7 +18,10 @@ void read_server(int sock_fd) {
   while (1) {
     // TODO: more C++ way of reading to buffer using iostream?
     read(sock_fd, buffer, sizeof buffer);
-    std::cout << buffer << std::endl;
+    std::string decrypted_buffer(buffer);
+    decrypted_buffer =
+        Encryption::decrypt(decrypted_buffer, Encryption::OneTimePad);
+    std::cout << decrypted_buffer << std::endl;
     bzero(buffer, sizeof buffer);
   }
 }
@@ -26,8 +31,9 @@ void prompt_user_input(int sock_fd) {
 
   while (1) {
     std::getline(std::cin, input);
-
-    send(sock_fd, input.data(), input.size(), 0);
+    std::string encrypted_input =
+        Encryption::encrypt(input, Encryption::OneTimePad);
+    send(sock_fd, encrypted_input.data(), encrypted_input.size(), 0);
     std::cin.clear();
   }
 }
