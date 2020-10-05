@@ -1,5 +1,6 @@
 #include <arpa/inet.h>
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <strings.h>
 #include <sys/socket.h>
@@ -18,10 +19,13 @@ void read_server(int sock_fd) {
   while (1) {
     // TODO: more C++ way of reading to buffer using iostream?
     read(sock_fd, buffer, sizeof buffer);
-    std::string decrypted_buffer(buffer);
-    decrypted_buffer =
-        Encryption::decrypt(decrypted_buffer, Encryption::OneTimePad);
-    std::cout << decrypted_buffer << std::endl;
+    // Buffer is split because TCP packets may contain more than one message
+    std::istringstream iss{buffer};
+    std::string part;
+    while (std::getline(iss, part, (char)23)) {
+      std::cout << Encryption::decrypt(part, Encryption::OneTimePad)
+                << std::endl;
+    }
     bzero(buffer, sizeof buffer);
   }
 }
