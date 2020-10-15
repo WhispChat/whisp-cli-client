@@ -1,24 +1,36 @@
-#include <arpa/inet.h>
+#if defined(unix) || defined(__unix) || defined(__unix__) || defined(__APPLE__)
+  #include <arpa/inet.h>
+  #include <sys/socket.h>
+  #include <unistd.h>
+#elif _WIN32
+  #define NTDDI_VERSION NTDDI_VISTA
+  #define WINVER _WIN32_WINNT_VISTA
+  #define _WIN32_WINNT _WIN32_WINNT_VISTA
+
+  #include <winsock2.h>
+  #include <ws2tcpip.h>
+#endif
+
+#include <cstring>
 #include <iostream>
 #include <sstream>
 #include <string>
 #include <strings.h>
-#include <sys/socket.h>
 #include <thread>
-#include <unistd.h>
 
 #include "whisp-cli/encryption.h"
 
 // TODO: make configurable
 const int SERVER_PORT = 8080;
-const std::string SERVER_HOST = "0.0.0.0";
+const std::string SERVER_HOST = "127.0.0.1";
 
 void read_server(int sock_fd) {
   char buffer[4096];
 
   while (1) {
     // TODO: more C++ way of reading to buffer using iostream?
-    read(sock_fd, buffer, sizeof buffer);
+    recv(sock_fd, buffer, sizeof buffer, 0);
+
     // Buffer is split because TCP packets may contain more than one message
     std::istringstream iss{buffer};
     std::string part;
@@ -26,7 +38,7 @@ void read_server(int sock_fd) {
       std::cout << Encryption::decrypt(part, Encryption::OneTimePad)
                 << std::endl;
     }
-    bzero(buffer, sizeof buffer);
+    memset(buffer, 0, sizeof buffer);
   }
 }
 
@@ -46,8 +58,22 @@ int main(int argc, char **argv) {
   int sock_fd;
   struct sockaddr_in serv_addr;
 
+  // Initialize Winsock
+  #ifdef _WIN32
+    WSADATA wsaData;
+    int err_code = WSAStartup(MAKEWORD(2, 2), &wsaData);
+    if (err_code) {
+      std::cerr << "WSAStartup function failed with error code: " << err_code << "\n";
+      return 1;
+    }
+  #endif
+
+  // Create socket
   if ((sock_fd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
     std::cout << "socket creation error" << std::endl;
+    #ifdef _WIN32
+      WSACleanup();
+    #endif
     return -1;
   }
 
@@ -76,6 +102,8 @@ int main(int argc, char **argv) {
   prompt_user_input(sock_fd);
 
   close(sock_fd);
-
+  #ifdef _WIN32
+    WSACleanup();
+  #endif
   return 0;
 }

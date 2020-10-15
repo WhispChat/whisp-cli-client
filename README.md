@@ -7,6 +7,11 @@ Whisp chat platform.
 - Make
 - C++17 compiler
 
+> **⚠ WARNING**  
+>When building in a Windows environment, make sure that you have the Windows SDK installed.
+>For example, the Windows SDK for Windows 10 can be found at:
+>https://developer.microsoft.com/en-us/windows/downloads/windows-10-sdk/
+
 ## Installation
 1. Clone repository:
 ```bash
