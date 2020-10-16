@@ -22,6 +22,7 @@
 #include <thread>
 
 #include "whisp-cli/encryption.h"
+#include "whisp-cli/message.h"
 #include "whisp-protobuf/cpp/client.pb.h"
 #include "whisp-protobuf/cpp/server.pb.h"
 
@@ -32,10 +33,10 @@ const std::string SERVER_HOST = "127.0.0.1";
 std::ostream &print_message(server::Message::MessageType type) {
   switch (type) {
   case server::Message::INFO:
-    std::cout << "[INFO]  "; // extra space to align tags vertically
+    std::cout << "[INFO] ";
     break;
   case server::Message::ERROR:
-    std::cout << "[ERROR] ";
+    std::cerr << "[ERROR] ";
     break;
   case server::Message::DEBUG:
     std::cout << "[DEBUG] ";
@@ -43,20 +44,6 @@ std::ostream &print_message(server::Message::MessageType type) {
   }
 
   return std::cout;
-}
-
-std::string create_message_str(std::string content) {
-  // TODO: check if text is a command
-  client::Message msg;
-  msg.set_content(content);
-
-  google::protobuf::Any any;
-  any.PackFrom(msg);
-
-  std::string msg_str;
-  any.SerializeToString(&msg_str);
-
-  return msg_str;
 }
 
 void read_server(int sock_fd) {
@@ -84,13 +71,18 @@ void read_server(int sock_fd) {
         any.UnpackTo(&status);
 
         if (status.full()) {
+          print_message(server::Message::ERROR)
+              << "Failed to join: Server full (" << status.number_connections()
+              << "/" << status.number_connections() << ")\n";
           close(sock_fd);
           exit(EXIT_FAILURE);
         }
 
+        print_message(server::Message::INFO) << "Connected to " << SERVER_HOST
+                                             << ":" << SERVER_PORT << '\n';
         print_message(server::Message::INFO)
-            << "Number of connected users: " + status.number_connections()
-            << '\n';
+            << "Number of connected users: "
+            << std::to_string(status.number_connections()) << '\n';
       } else if (any.Is<server::Message>()) {
         server::Message msg;
         any.UnpackTo(&msg);
@@ -108,11 +100,14 @@ void prompt_user_input(int sock_fd) {
   while (1) {
     std::getline(std::cin, input);
 
-    std::string msg_str = create_message_str(input);
+    Message msg(input);
+    std::string msg_str = msg.get_message_str();
 
     std::string encrypted_input =
         Encryption::encrypt(msg_str, Encryption::OneTimePad);
+
     send(sock_fd, encrypted_input.data(), encrypted_input.size(), 0);
+
     std::cin.clear();
   }
 }
@@ -130,15 +125,14 @@ int main(int argc, char **argv) {
   WSADATA wsaData;
   int err_code = WSAStartup(MAKEWORD(2, 2), &wsaData);
   if (err_code) {
-    std::cerr << "WSAStartup function failed with error code: " << err_code
-              << "\n";
+    print_message(server::Message::ERROR)
+        << "WSAStartup function failed with error code: " << err_code << "\n";
     return EXIT_FAILURE;
   }
 #endif
 
-  // Create socket
   if ((sock_fd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-    std::cout << "socket creation error" << std::endl;
+    print_message(server::Message::ERROR) << "Socket creation error\n";
 #ifdef _WIN32
     WSACleanup();
 #endif
@@ -150,17 +144,14 @@ int main(int argc, char **argv) {
 
   // convert IP addresses from text to binary form
   if (inet_pton(AF_INET, SERVER_HOST.c_str(), &serv_addr.sin_addr) != 1) {
-    std::cout << "invalid address" << std::endl;
+    print_message(server::Message::ERROR) << "Invalid IP address\n";
     return EXIT_FAILURE;
   }
 
   if (connect(sock_fd, (struct sockaddr *)&serv_addr, sizeof serv_addr) == -1) {
-    std::cout << "connection failed" << std::endl;
+    print_message(server::Message::ERROR) << "Couldn't connect to server\n";
     return EXIT_FAILURE;
   }
-
-  std::cout << "[INFO] Connected to " << SERVER_HOST << ":" << SERVER_PORT
-            << std::endl;
 
   // non-blocking receive from server in separate thread
   std::thread t(&read_server, sock_fd);
