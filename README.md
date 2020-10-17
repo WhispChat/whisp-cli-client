@@ -6,6 +6,7 @@ Whisp chat platform.
 - CMake >=3.12
 - Make
 - C++17 compiler
+- [Google Protocol Buffers](https://developers.google.com/protocol-buffers) >=3.13.0
 
 > **⚠ WARNING**  
 >When building in a Windows environment, make sure that you have the Windows SDK installed.
