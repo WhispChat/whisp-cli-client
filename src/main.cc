@@ -11,7 +11,6 @@
 #include <ws2tcpip.h>
 #endif
 
-#include <arpa/inet.h>
 #include <cstring>
 #include <google/protobuf/any.pb.h>
 #include <iostream>
@@ -32,7 +31,7 @@ const std::string SERVER_HOST = "127.0.0.1";
 std::ostream &print_message(server::Message::MessageType type) {
   switch (type) {
   case server::Message::INFO:
-    std::cout << "[INFO] ";
+    std::cout << "[INFO ] ";
     return std::cout;
   case server::Message::ERROR:
     std::cerr << "[ERROR] ";
