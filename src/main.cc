@@ -69,10 +69,10 @@ void read_server(int sock_fd) {
         server::Status status;
         any.UnpackTo(&status);
 
-        if (status.full()) {
+        if (status.number_connections() >= status.max_connections()) {
           print_message(server::Message::ERROR)
-              << "Failed to join: Server full (" << status.number_connections()
-              << "/" << status.number_connections() << ")\n";
+              << "Failed to join: Server full (" << status.max_connections()
+              << "/" << status.max_connections() << ")\n";
           close(sock_fd);
           exit(EXIT_FAILURE);
         }
@@ -81,7 +81,9 @@ void read_server(int sock_fd) {
                                              << ":" << SERVER_PORT << '\n';
         print_message(server::Message::INFO)
             << "Number of connected users: "
-            << std::to_string(status.number_connections()) << '\n';
+            << std::to_string(status.number_connections() + 1) << "/"
+            << std::to_string(status.max_connections()) << '\n';
+
       } else if (any.Is<server::Message>()) {
         server::Message msg;
         any.UnpackTo(&msg);
