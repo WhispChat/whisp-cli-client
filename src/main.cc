@@ -33,13 +33,13 @@ std::ostream &print_message(server::Message::MessageType type) {
   switch (type) {
   case server::Message::INFO:
     std::cout << "[INFO] ";
-    break;
+    return std::cout;
   case server::Message::ERROR:
     std::cerr << "[ERROR] ";
-    break;
+    return std::cerr;
   case server::Message::DEBUG:
     std::cout << "[DEBUG] ";
-    break;
+    return std::cout;
   }
 
   return std::cout;
