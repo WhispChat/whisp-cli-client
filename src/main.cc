@@ -22,7 +22,6 @@
 #include <thread>
 
 #include "whisp-cli/encryption.h"
-#include "whisp-cli/message.h"
 #include "whisp-protobuf/cpp/client.pb.h"
 #include "whisp-protobuf/cpp/server.pb.h"
 
@@ -100,8 +99,10 @@ void prompt_user_input(int sock_fd) {
   while (1) {
     std::getline(std::cin, input);
 
-    Message msg(input);
-    std::string msg_str = msg.get_message_str();
+    client::Message msg;
+    msg.set_content(input);
+    std::string msg_str;
+    msg.SerializeToString(&msg_str);
 
     std::string encrypted_input =
         Encryption::encrypt(msg_str, Encryption::OneTimePad);
