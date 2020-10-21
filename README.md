@@ -16,7 +16,7 @@ Whisp chat platform.
 ## Installation
 1. Clone repository:
 ```bash
-git clone git@github.com:WhispChat/whisp-cli-client.git
+git clone --recurse-submodules git@github.com:WhispChat/whisp-cli-client.git
 ```
 2. Create build directory:
 ```bash
