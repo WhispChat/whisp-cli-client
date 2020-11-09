@@ -62,8 +62,15 @@ void read_server(int sock_fd) {
         client::Message user_msg;
         any.UnpackTo(&user_msg);
 
-        std::cout << "[" << user_msg.username() << "]: " << user_msg.content()
-                  << '\n';
+        if (user_msg.has_registered_user()) {
+          std::cout << "[" << user_msg.registered_user().username()
+                    << "]: " << user_msg.content() << '\n';
+        } else if (user_msg.has_guest_user()) {
+          std::cout << "[" << user_msg.guest_user().username()
+                    << " (guest)]: " << user_msg.content() << '\n';
+        } else {
+          std::cout << "ok\n";
+        }
       } else if (any.Is<server::Status>()) {
         server::Status status;
         any.UnpackTo(&status);
