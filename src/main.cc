@@ -93,6 +93,10 @@ void read_server(int sock_fd) {
         any.UnpackTo(&msg);
 
         print_message(msg.type()) << msg.content() << '\n';
+      } else if (any.Is<server::ServerClosed>()) {
+        print_message(server::Message::INFO) << "Server closing.\n";
+        close(sock_fd);
+        exit(EXIT_SUCCESS);
       }
     }
     memset(buffer, 0, sizeof buffer);
