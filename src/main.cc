@@ -68,8 +68,6 @@ void read_server(int sock_fd) {
         } else if (user_msg.has_guest_user()) {
           std::cout << "[" << user_msg.guest_user().username()
                     << " (guest)]: " << user_msg.content() << '\n';
-        } else {
-          std::cout << "ok\n";
         }
       } else if (any.Is<server::Status>()) {
         server::Status status;
