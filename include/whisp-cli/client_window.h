@@ -10,6 +10,7 @@ public:
   ClientWindow();
   void add_message(const std::string& message);
   void set_sock_fd(int sock_fd);
+  void read_server();
 
 private:
   Gtk::VPaned root_paned;

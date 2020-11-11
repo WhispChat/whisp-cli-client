@@ -70,6 +70,67 @@ std::ostream &ClientWindow::print_message(server::Message::MessageType type) {
   return std::cout;
 }
 
+void ClientWindow::read_server() {
+  char buffer[4096];
+
+  while (1) {
+    recv(sock_fd, buffer, sizeof buffer, 0);
+
+    // Buffer is split because TCP packets may contain more than one message
+    std::istringstream iss{buffer};
+    std::string part;
+    while (std::getline(iss, part, (char)23)) {
+      std::string message = Encryption::decrypt(part, Encryption::OneTimePad);
+      google::protobuf::Any any;
+      any.ParseFromString(message);
+
+      if (any.Is<client::Message>()) {
+        client::Message user_msg;
+        any.UnpackTo(&user_msg);
+
+        if (user_msg.has_registered_user()) {
+          ClientWindow::add_message("[" + user_msg.registered_user().username() + "]: " + user_msg.content());
+          std::cout << "[" << user_msg.registered_user().username()
+                    << "]: " << user_msg.content() << '\n';
+        } else if (user_msg.has_guest_user()) {
+          ClientWindow::add_message("[" + user_msg.guest_user().username() + "(guest)]: " + user_msg.content());
+          std::cout << "[" << user_msg.guest_user().username()
+                    << " (guest)]: " << user_msg.content() << '\n';
+        }
+      } else if (any.Is<server::Status>()) {
+        server::Status status;
+        any.UnpackTo(&status);
+
+        if (status.number_connections() >= status.max_connections()) {
+          print_message(server::Message::ERROR)
+              << "Failed to join: Server full (" << status.max_connections()
+              << "/" << status.max_connections() << ")\n";
+          ::close(sock_fd);
+          exit(EXIT_FAILURE);
+        }
+
+        print_message(server::Message::INFO) << "Connected to " << SERVER_HOST
+                                             << ":" << SERVER_PORT << '\n';
+        print_message(server::Message::INFO)
+            << "Number of connected users: "
+            << std::to_string(status.number_connections() + 1) << "/"
+            << std::to_string(status.max_connections()) << '\n';
+
+      } else if (any.Is<server::Message>()) {
+        server::Message msg;
+        any.UnpackTo(&msg);
+
+        print_message(msg.type()) << msg.content() << '\n';
+      } else if (any.Is<server::ServerClosed>()) {
+        print_message(server::Message::INFO) << "Server closing.\n";
+        ::close(sock_fd);
+        exit(EXIT_SUCCESS);
+      }
+    }
+    memset(buffer, 0, sizeof buffer);
+  }
+}
+
 void ClientWindow::set_sock_fd(int new_sock_fd) {
   ClientWindow::sock_fd = new_sock_fd;
 }
