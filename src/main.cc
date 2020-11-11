@@ -15,23 +15,22 @@
 #include "whisp-protobuf/cpp/client.pb.h"
 #include "whisp-protobuf/cpp/server.pb.h"
 
-// TODO: make configurable
+// TODO: Make these settings configurable
 const int SERVER_PORT = 8080;
 const std::string SERVER_HOST = "0.0.0.0";
 
 std::ostream &print_message(server::Message::MessageType type) {
   switch (type) {
-  case server::Message::INFO:
-    std::cout << "[INFO ] ";
-    return std::cout;
-  case server::Message::ERROR:
-    std::cerr << "[ERROR] ";
-    return std::cerr;
-  case server::Message::DEBUG:
-    std::cout << "[DEBUG] ";
-    return std::cout;
+    case server::Message::INFO:
+      std::cout << "[INFO ] ";
+      return std::cout;
+    case server::Message::ERROR:
+      std::cerr << "[ERROR] ";
+      return std::cerr;
+    case server::Message::DEBUG:
+      std::cout << "[DEBUG] ";
+      return std::cout;
   }
-
   return std::cout;
 }
 
@@ -122,14 +121,13 @@ int main(int argc, char **argv) {
   int sock_fd;
   struct sockaddr_in serv_addr;
 
+  serv_addr.sin_family = AF_INET;
+  serv_addr.sin_port = htons(SERVER_PORT);
 
   if ((sock_fd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
     print_message(server::Message::ERROR) << "Socket creation error\n";
     return EXIT_FAILURE;
   }
-
-  serv_addr.sin_family = AF_INET;
-  serv_addr.sin_port = htons(SERVER_PORT);
 
   // convert IP addresses from text to binary form
   if (inet_pton(AF_INET, SERVER_HOST.c_str(), &serv_addr.sin_addr) != 1) {
@@ -142,8 +140,8 @@ int main(int argc, char **argv) {
     return EXIT_FAILURE;
   }
 
-  // non-blocking receive from server in separate thread
   std::thread t(&read_server, sock_fd);
+  // Non-blocking receive from server in separate thread
   t.detach();
 
   // block to read user input
