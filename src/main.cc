@@ -11,15 +11,15 @@ const std::string SERVER_HOST = "0.0.0.0";
 
 std::ostream &print_message(server::Message::MessageType type) {
   switch (type) {
-    case server::Message::INFO:
-      std::cout << "[INFO ] ";
-      return std::cout;
-    case server::Message::ERROR:
-      std::cerr << "[ERROR] ";
-      return std::cerr;
-    case server::Message::DEBUG:
-      std::cout << "[DEBUG] ";
-      return std::cout;
+  case server::Message::INFO:
+    std::cout << "[INFO ] ";
+    return std::cout;
+  case server::Message::ERROR:
+    std::cerr << "[ERROR] ";
+    return std::cerr;
+  case server::Message::DEBUG:
+    std::cout << "[DEBUG] ";
+    return std::cout;
   }
   return std::cout;
 }
