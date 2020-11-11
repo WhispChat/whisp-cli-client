@@ -135,9 +135,15 @@ int main(int argc, char **argv) {
     return EXIT_FAILURE;
   }
 
+  // Connect to the server
+  print_message(server::Message::INFO) << "Connecting to " << SERVER_HOST << ":"
+                                       << SERVER_PORT << "...\n";
   if (connect(sock_fd, (struct sockaddr *)&serv_addr, sizeof serv_addr) == -1) {
     print_message(server::Message::ERROR) << "Couldn't connect to server\n";
     return EXIT_FAILURE;
+  } else {
+    client_window.add_message("Connected successfully!");
+    print_message(server::Message::ERROR) << "Connected successfully!\n";
   }
 
   std::thread t(&read_server, sock_fd);
