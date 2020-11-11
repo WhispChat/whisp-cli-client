@@ -7,11 +7,16 @@ Whisp chat platform.
 - Make
 - C++17 compiler
 - [Google Protocol Buffers](https://developers.google.com/protocol-buffers) >=3.13.0
+- [GTK](https://www.gtk.org/) >=3.0
+- [gktmm](https://www.gtkmm.org/) >=3.0
 
-> **⚠ WARNING**  
->When building in a Windows environment, make sure that you have the Windows SDK installed.
->For example, the Windows SDK for Windows 10 can be found at:
->https://developer.microsoft.com/en-us/windows/downloads/windows-10-sdk/
+> **⚠ IMPORTANT**  
+>If you're using an X server for graphic displays, setting the following environment variables is required:
+>* export DISPLAY=$(grep -m 1 nameserver /etc/resolv.conf | awk '{print $2}'):0.0
+>* export LIBGL_ALWAYS_INDIRECT=1
+>
+>If you're using WSL2, use the following arguments when starting the X server:
+>* -wgl -ac
 
 ## Installation
 1. Clone repository:
