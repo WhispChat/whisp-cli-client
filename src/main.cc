@@ -13,6 +13,7 @@
 
 #include "whisp-cli/encryption.h"
 #include "whisp-protobuf/cpp/client.pb.h"
+#include "whisp-cli/client_window.h"
 #include "whisp-protobuf/cpp/server.pb.h"
 
 // TODO: Make these settings configurable
@@ -92,27 +93,6 @@ void read_server(int sock_fd) {
     memset(buffer, 0, sizeof buffer);
   }
 }
-
-void prompt_user_input(int sock_fd) {
-  std::string input;
-
-  while (1) {
-    std::getline(std::cin, input);
-
-    client::Message msg;
-    msg.set_content(input);
-    std::string msg_str;
-    msg.SerializeToString(&msg_str);
-
-    std::string encrypted_input =
-        Encryption::encrypt(msg_str, Encryption::OneTimePad);
-
-    send(sock_fd, encrypted_input.data(), encrypted_input.size(), 0);
-
-    std::cin.clear();
-  }
-}
-
 int main(int argc, char **argv) {
   // verify that the version of the library that we linked against is
   // compatible with the version of the headers we compiled against.
@@ -135,12 +115,19 @@ int main(int argc, char **argv) {
     return EXIT_FAILURE;
   }
 
+  // Initialize the GUI
+  auto app = Gtk::Application::create(argc, argv, "whisp.client.interface");
+  ClientWindow client_window;
+  client_window.set_sock_fd(sock_fd);
+
   // Connect to the server
+  client_window.add_message("Connecting to " + SERVER_HOST + ":" +
+                            std::to_string(SERVER_PORT) + "...");
   print_message(server::Message::INFO) << "Connecting to " << SERVER_HOST << ":"
                                        << SERVER_PORT << "...\n";
   if (connect(sock_fd, (struct sockaddr *)&serv_addr, sizeof serv_addr) == -1) {
+    client_window.add_message("Couldn't connect to server.");
     print_message(server::Message::ERROR) << "Couldn't connect to server\n";
-    return EXIT_FAILURE;
   } else {
     client_window.add_message("Connected successfully!");
     print_message(server::Message::ERROR) << "Connected successfully!\n";
@@ -150,9 +137,9 @@ int main(int argc, char **argv) {
   // Non-blocking receive from server in separate thread
   t.detach();
 
-  // block to read user input
-  prompt_user_input(sock_fd);
+  // TODO: Figure out how to catch the window closing event so we can correctly
+  //  close the socket
+  // close(sock_fd);
 
-
-  return EXIT_SUCCESS;
+  return app->run(client_window);
 }
