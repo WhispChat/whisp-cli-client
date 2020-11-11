@@ -23,11 +23,6 @@ include_directories(${PROTOBUF_INCLUDE_DIR})
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GTK3 gtk+-3.0 REQUIRED)
 pkg_check_modules(GTKMM gtkmm-3.0 REQUIRED)
-if(WIN32)
-  target_link_libraries(whisp-cli
-    PRIVATE Threads::Threads whisp-cli-lib ws2_32 ${PROTOBUF_LIBRARY})
-else()
-  target_link_libraries(whisp-cli
-    PRIVATE Threads::Threads whisp-cli-lib ${PROTOBUF_LIBRARY}
-    ${GTK3_LIBRARIES} ${GTKMM_LIBRARIES})
-endif()
+target_link_libraries(whisp-cli
+  PRIVATE Threads::Threads whisp-cli-lib ${PROTOBUF_LIBRARY}
+  ${GTK3_LIBRARIES} ${GTKMM_LIBRARIES})

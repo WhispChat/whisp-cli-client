@@ -1,21 +1,12 @@
-#if defined(unix) || defined(__unix) || defined(__unix__) || defined(__APPLE__)
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <unistd.h>
-#elif _WIN32
-#define NTDDI_VERSION NTDDI_VISTA
-#define WINVER _WIN32_WINNT_VISTA
-#define _WIN32_WINNT _WIN32_WINNT_VISTA
-
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#endif
 
 #include <cstring>
 #include <google/protobuf/any.pb.h>
 #include <iostream>
 #include <sstream>
-#include <stdlib.h>
+#include <cstdlib>
 #include <string>
 #include <strings.h>
 #include <thread>
@@ -26,7 +17,7 @@
 
 // TODO: make configurable
 const int SERVER_PORT = 8080;
-const std::string SERVER_HOST = "127.0.0.1";
+const std::string SERVER_HOST = "0.0.0.0";
 
 std::ostream &print_message(server::Message::MessageType type) {
   switch (type) {
@@ -131,22 +122,9 @@ int main(int argc, char **argv) {
   int sock_fd;
   struct sockaddr_in serv_addr;
 
-// Initialize Winsock
-#ifdef _WIN32
-  WSADATA wsaData;
-  int err_code = WSAStartup(MAKEWORD(2, 2), &wsaData);
-  if (err_code) {
-    print_message(server::Message::ERROR)
-        << "WSAStartup function failed with error code: " << err_code << "\n";
-    return EXIT_FAILURE;
-  }
-#endif
 
   if ((sock_fd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
     print_message(server::Message::ERROR) << "Socket creation error\n";
-#ifdef _WIN32
-    WSACleanup();
-#endif
     return EXIT_FAILURE;
   }
 
@@ -171,10 +149,6 @@ int main(int argc, char **argv) {
   // block to read user input
   prompt_user_input(sock_fd);
 
-  close(sock_fd);
-#ifdef _WIN32
-  WSACleanup();
-#endif
 
   return EXIT_SUCCESS;
 }
