@@ -1,11 +1,5 @@
-#include <sys/socket.h>
-
 #include <google/protobuf/any.pb.h>
-#include <arpa/inet.h>
 #include <sys/socket.h>
-#include <unistd.h>
-#include <iostream>
-#include <sstream>
 
 #include "whisp-cli/client_window.h"
 #include "whisp-cli/encryption.h"

@@ -1,19 +1,7 @@
 #include <arpa/inet.h>
-#include <sys/socket.h>
-#include <unistd.h>
-
-#include <cstring>
-#include <google/protobuf/any.pb.h>
-#include <iostream>
-#include <sstream>
-#include <cstdlib>
-#include <string>
-#include <strings.h>
 #include <gtkmm/application.h>
 #include <thread>
 
-#include "whisp-cli/encryption.h"
-#include "whisp-protobuf/cpp/client.pb.h"
 #include "whisp-cli/client_window.h"
 #include "whisp-protobuf/cpp/server.pb.h"
 
