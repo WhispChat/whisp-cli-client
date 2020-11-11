@@ -59,9 +59,6 @@ int main(int argc, char **argv) {
   if (connect(sock_fd, (struct sockaddr *)&serv_addr, sizeof serv_addr) == -1) {
     client_window.add_message("Couldn't connect to server.");
     print_message(server::Message::ERROR) << "Couldn't connect to server\n";
-  } else {
-    client_window.add_message("Connected successfully!");
-    print_message(server::Message::ERROR) << "Connected successfully!\n";
   }
 
   // Non-blocking receive from server in separate thread
