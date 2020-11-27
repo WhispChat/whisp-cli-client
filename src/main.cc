@@ -127,6 +127,8 @@ SSL_CTX *initialize_ssl_context() {
     exit(EXIT_FAILURE);
   }
 
+  SSL_CTX_set_min_proto_version(ssl_ctx, TLS1_2_VERSION);
+
   return ssl_ctx;
 }
 
