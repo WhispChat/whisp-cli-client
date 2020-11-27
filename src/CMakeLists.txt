@@ -18,12 +18,10 @@ include(FindProtobuf)
 find_package(Protobuf REQUIRED)
 include_directories(${PROTOBUF_INCLUDE_DIR})
 
-find_package(OpenSSL REQUIRED)
-
 if(WIN32)
   target_link_libraries(whisp-cli
-    PRIVATE Threads::Threads whisp-cli-lib ws2_32 ${PROTOBUF_LIBRARY} OpenSSL::SSL)
+    PRIVATE Threads::Threads whisp-cli-lib ws2_32 ${PROTOBUF_LIBRARY})
 else()
   target_link_libraries(whisp-cli
-    PRIVATE Threads::Threads whisp-cli-lib ${PROTOBUF_LIBRARY} OpenSSL::SSL)
+    PRIVATE Threads::Threads whisp-cli-lib ${PROTOBUF_LIBRARY})
 endif()
