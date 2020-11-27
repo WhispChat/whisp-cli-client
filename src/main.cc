@@ -14,6 +14,8 @@
 #include <cstring>
 #include <google/protobuf/any.pb.h>
 #include <iostream>
+#include <openssl/err.h>
+#include <openssl/ssl.h>
 #include <sstream>
 #include <stdlib.h>
 #include <string>
@@ -27,6 +29,16 @@
 // TODO: make configurable
 const int SERVER_PORT = 8080;
 const std::string SERVER_HOST = "127.0.0.1";
+
+void cleanup(SSL *ssl, SSL_CTX *ssl_ctx, int sock_fd) {
+  SSL_free(ssl);
+  close(sock_fd);
+  SSL_CTX_free(ssl_ctx);
+
+#ifdef _WIN32
+  WSACleanup();
+#endif
+}
 
 std::ostream &print_message(server::Message::MessageType type) {
   switch (type) {
@@ -44,17 +56,17 @@ std::ostream &print_message(server::Message::MessageType type) {
   return std::cout;
 }
 
-void read_server(int sock_fd) {
+void read_server(SSL *ssl, SSL_CTX *ssl_ctx, int sock_fd) {
   char buffer[4096];
 
   while (1) {
-    recv(sock_fd, buffer, sizeof buffer, 0);
+    SSL_read(ssl, buffer, sizeof buffer);
 
     // Buffer is split because TCP packets may contain more than one message
     std::istringstream iss{buffer};
     std::string part;
     while (std::getline(iss, part, (char)23)) {
-      std::string message = Encryption::decrypt(part, Encryption::OneTimePad);
+      std::string message(part);
       google::protobuf::Any any;
       any.ParseFromString(message);
 
@@ -77,7 +89,8 @@ void read_server(int sock_fd) {
           print_message(server::Message::ERROR)
               << "Failed to join: Server full (" << status.max_connections()
               << "/" << status.max_connections() << ")\n";
-          close(sock_fd);
+
+          cleanup(ssl, ssl_ctx, sock_fd);
           exit(EXIT_FAILURE);
         }
 
@@ -95,7 +108,8 @@ void read_server(int sock_fd) {
         print_message(msg.type()) << msg.content() << '\n';
       } else if (any.Is<server::ServerClosed>()) {
         print_message(server::Message::INFO) << "Server closing.\n";
-        close(sock_fd);
+
+        cleanup(ssl, ssl_ctx, sock_fd);
         exit(EXIT_SUCCESS);
       }
     }
@@ -103,7 +117,20 @@ void read_server(int sock_fd) {
   }
 }
 
-void prompt_user_input(int sock_fd) {
+SSL_CTX *initialize_ssl_context() {
+  const SSL_METHOD *method = TLS_client_method();
+  SSL_CTX *ssl_ctx = SSL_CTX_new(method);
+
+  if (SSL_CTX_set_default_verify_paths(ssl_ctx) != 1) {
+    std::cerr << "Error loading trust store\n";
+    ERR_print_errors_fp(stderr);
+    exit(EXIT_FAILURE);
+  }
+
+  return ssl_ctx;
+}
+
+void prompt_user_input(SSL *ssl) {
   std::string input;
 
   while (1) {
@@ -114,10 +141,7 @@ void prompt_user_input(int sock_fd) {
     std::string msg_str;
     msg.SerializeToString(&msg_str);
 
-    std::string encrypted_input =
-        Encryption::encrypt(msg_str, Encryption::OneTimePad);
-
-    send(sock_fd, encrypted_input.data(), encrypted_input.size(), 0);
+    SSL_write(ssl, msg_str.data(), msg_str.size());
 
     std::cin.clear();
   }
@@ -127,6 +151,13 @@ int main(int argc, char **argv) {
   // verify that the version of the library that we linked against is
   // compatible with the version of the headers we compiled against.
   GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+  SSL_CTX *ssl_ctx = initialize_ssl_context();
+  SSL *ssl = SSL_new(ssl_ctx);
+  if (!ssl) {
+    std::cerr << "SSL_new() failed\n";
+    return EXIT_FAILURE;
+  }
 
   int sock_fd;
   struct sockaddr_in serv_addr;
@@ -164,17 +195,24 @@ int main(int argc, char **argv) {
     return EXIT_FAILURE;
   }
 
+  SSL_set_fd(ssl, sock_fd);
+  int status = SSL_connect(ssl);
+  if (status != 1) {
+    SSL_get_error(ssl, status);
+    ERR_print_errors_fp(stderr);
+    std::cerr << "SSL_connect failed with SSL_get_error code " << status
+              << '\n';
+    return EXIT_FAILURE;
+  }
+
   // non-blocking receive from server in separate thread
-  std::thread t(&read_server, sock_fd);
+  std::thread t(&read_server, ssl, ssl_ctx, sock_fd);
   t.detach();
 
   // block to read user input
-  prompt_user_input(sock_fd);
+  prompt_user_input(ssl);
 
-  close(sock_fd);
-#ifdef _WIN32
-  WSACleanup();
-#endif
+  cleanup(ssl, ssl_ctx, sock_fd);
 
   return EXIT_SUCCESS;
 }
