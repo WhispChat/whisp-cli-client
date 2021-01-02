@@ -21,6 +21,7 @@ void load() {
     // Create file and fill with default values in case it does not exist yet
     config_fstream.close();
     std::fstream config_fstream(config_filename, std::ios::out);
+
     for (std::pair<std::string, std::string> entry : default_config) {
       config_fstream << entry.first << " " << entry.second << std::endl;
     }
@@ -31,8 +32,11 @@ void load() {
     while (config_fstream >> f_key >> f_value) {
       f_keys.push_back(f_key);
     }
+
+    config_fstream.clear();
     for (std::pair<std::string, std::string> d_entry : default_config) {
-      if (std::find(f_keys.begin(), f_keys.end(), d_entry.first) == f_keys.end()) {
+      if (std::find(f_keys.begin(), f_keys.end(), d_entry.first) ==
+          f_keys.end()) {
         config_fstream << d_entry.first << " " << d_entry.second << std::endl;
       }
     }
@@ -56,7 +60,8 @@ std::string read(std::string lookup_key) {
     }
   }
 
-  LOG_ERROR << "Could not retrieve this key - returning default value" << '\n';
+  LOG_ERROR << "Could not find user configuration value for " << lookup_key
+            << " - using default instead" << '\n';
   config_fstream.close();
   config_fstream_mutex.unlock();
   return default_config.find(lookup_key)->second;
