@@ -36,3 +36,7 @@ the `whisp-server` binary from the [server repository](https://github.com/WhispC
 When the server is running, you can run the `whisp-cli` binary to connect to the
 server. You should see the message `[INFO] Connected to 0.0.0.0:8080`. You can
 start multiple client processes to test message broadcasting and such.
+
+If you are attempting to connect to an external server, you will have to modify
+the host and port values in the `user.cfg` file, which is created the first time
+you run the `whisp-cli` binary.

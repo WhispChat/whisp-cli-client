@@ -22,13 +22,11 @@
 #include <strings.h>
 #include <thread>
 
+#include "whisp-cli/config.h"
 #include "whisp-cli/encryption.h"
+#include "whisp-cli/logging.h"
 #include "whisp-protobuf/cpp/client.pb.h"
 #include "whisp-protobuf/cpp/server.pb.h"
-
-// TODO: make configurable
-const int SERVER_PORT = 8080;
-const std::string SERVER_HOST = "127.0.0.1";
 
 void cleanup(SSL *ssl, SSL_CTX *ssl_ctx, int sock_fd) {
   SSL_free(ssl);
@@ -40,23 +38,7 @@ void cleanup(SSL *ssl, SSL_CTX *ssl_ctx, int sock_fd) {
 #endif
 }
 
-std::ostream &print_message(server::Message::MessageType type) {
-  switch (type) {
-  case server::Message::INFO:
-    std::cout << "[INFO ] ";
-    return std::cout;
-  case server::Message::ERROR:
-    std::cerr << "[ERROR] ";
-    return std::cerr;
-  case server::Message::DEBUG:
-    std::cout << "[DEBUG] ";
-    return std::cout;
-  }
-
-  return std::cout;
-}
-
-void read_server(SSL *ssl, SSL_CTX *ssl_ctx, int sock_fd) {
+void read_server(SSL *ssl, SSL_CTX *ssl_ctx, int sock_fd, std::string host, int port) {
   char buffer[4096];
 
   while (SSL_read(ssl, buffer, sizeof buffer) > 0) {
@@ -80,28 +62,35 @@ void read_server(SSL *ssl, SSL_CTX *ssl_ctx, int sock_fd) {
       any.UnpackTo(&status);
 
       if (status.number_connections() >= status.max_connections()) {
-        print_message(server::Message::ERROR)
-            << "Failed to join: Server full (" << status.max_connections()
-            << "/" << status.max_connections() << ")\n";
+        LOG_ERROR << "Failed to join: Server full (" << status.max_connections()
+                  << "/" << status.max_connections() << ")\n";
 
         cleanup(ssl, ssl_ctx, sock_fd);
         exit(EXIT_FAILURE);
       }
 
-      print_message(server::Message::INFO) << "Connected to " << SERVER_HOST
-                                           << ":" << SERVER_PORT << '\n';
-      print_message(server::Message::INFO)
-          << "Number of connected users: "
-          << std::to_string(status.number_connections() + 1) << "/"
-          << std::to_string(status.max_connections()) << '\n';
+      LOG_INFO << "Connected to " << host << ":" << port << '\n';
+      LOG_INFO << "Number of connected users: "
+               << std::to_string(status.number_connections() + 1) << "/"
+               << std::to_string(status.max_connections()) << '\n';
 
     } else if (any.Is<server::Message>()) {
       server::Message msg;
       any.UnpackTo(&msg);
 
-      print_message(msg.type()) << msg.content() << '\n';
+      switch (msg.type()) {
+      case server::Message::INFO:
+        LOG_INFO << msg.content() << '\n';
+        break;
+      case server::Message::ERROR:
+        LOG_ERROR << msg.content() << '\n';
+        break;
+      case server::Message::DEBUG:
+        LOG_DEBUG << msg.content() << '\n';
+        break;
+      }
     } else if (any.Is<server::ServerClosed>()) {
-      print_message(server::Message::INFO) << "Server closing.\n";
+      LOG_INFO << "Server closing.\n";
 
       cleanup(ssl, ssl_ctx, sock_fd);
       exit(EXIT_SUCCESS);
@@ -143,6 +132,11 @@ void prompt_user_input(SSL *ssl) {
 }
 
 int main(int argc, char **argv) {
+  // Initialize configuration
+  config::load();
+  std::string server_host = config::read("SERVER_HOST");
+  int server_port = std::stoi(config::read("SERVER_PORT"));
+
   // verify that the version of the library that we linked against is
   // compatible with the version of the headers we compiled against.
   GOOGLE_PROTOBUF_VERIFY_VERSION;
@@ -162,14 +156,14 @@ int main(int argc, char **argv) {
   WSADATA wsaData;
   int err_code = WSAStartup(MAKEWORD(2, 2), &wsaData);
   if (err_code) {
-    print_message(server::Message::ERROR)
-        << "WSAStartup function failed with error code: " << err_code << "\n";
+    LOG_ERROR << "WSAStartup function failed with error code: " << err_code
+              << "\n";
     return EXIT_FAILURE;
   }
 #endif
 
   if ((sock_fd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-    print_message(server::Message::ERROR) << "Socket creation error\n";
+    LOG_ERROR << "Socket creation error\n";
 #ifdef _WIN32
     WSACleanup();
 #endif
@@ -177,16 +171,16 @@ int main(int argc, char **argv) {
   }
 
   serv_addr.sin_family = AF_INET;
-  serv_addr.sin_port = htons(SERVER_PORT);
+  serv_addr.sin_port = htons(server_port);
 
   // convert IP addresses from text to binary form
-  if (inet_pton(AF_INET, SERVER_HOST.c_str(), &serv_addr.sin_addr) != 1) {
-    print_message(server::Message::ERROR) << "Invalid IP address\n";
+  if (inet_pton(AF_INET, server_host.c_str(), &serv_addr.sin_addr) != 1) {
+    LOG_ERROR << "Invalid IP address\n";
     return EXIT_FAILURE;
   }
 
   if (connect(sock_fd, (struct sockaddr *)&serv_addr, sizeof serv_addr) == -1) {
-    print_message(server::Message::ERROR) << "Couldn't connect to server\n";
+    LOG_ERROR << "Couldn't connect to server\n";
     return EXIT_FAILURE;
   }
 
@@ -201,7 +195,7 @@ int main(int argc, char **argv) {
   }
 
   // non-blocking receive from server in separate thread
-  std::thread t(&read_server, ssl, ssl_ctx, sock_fd);
+  std::thread t(&read_server, ssl, ssl_ctx, sock_fd, server_host, server_port);
   t.detach();
 
   // block to read user input
