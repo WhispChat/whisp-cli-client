@@ -7,6 +7,7 @@ Whisp chat platform.
 - Make
 - C++17 compiler
 - [Google Protocol Buffers](https://developers.google.com/protocol-buffers) >=3.13.0
+- [Qt5](https://doc.qt.io/qt-5/gettingstarted.html)
 
 > **⚠ WARNING**  
 >When building in a Windows environment, make sure that you have the Windows SDK installed.
