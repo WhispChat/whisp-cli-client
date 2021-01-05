@@ -14,6 +14,7 @@
 #endif
 
 #include <QtWidgets>
+#include <mutex>
 #include <openssl/err.h>
 #include <openssl/ssl.h>
 #include <sstream>
@@ -39,6 +40,7 @@ private:
   int sock_fd;
   struct sockaddr_in serv_addr;
 
+  std::mutex io_mutex;
   QGridLayout *layout;
   QTextEdit *chat_text;
   QLineEdit *chat_input_box;

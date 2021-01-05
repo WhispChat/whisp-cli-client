@@ -121,8 +121,10 @@ void MainWindow::initialize_layout() {
 }
 
 void MainWindow::show_new_message(std::string message) {
+  io_mutex.lock();
   QString qstr = QString::fromStdString(message);
   chat_text->append(qstr);
+  io_mutex.unlock();
 }
 
 void MainWindow::send_message() {
