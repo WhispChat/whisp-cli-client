@@ -17,7 +17,6 @@
 #include <mutex>
 #include <openssl/err.h>
 #include <openssl/ssl.h>
-#include <sstream>
 
 class MainWindow : public QWidget {
 public:

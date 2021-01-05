@@ -1,5 +1,6 @@
 #include <google/protobuf/any.pb.h>
 #include <iostream>
+#include <sstream>
 #include <thread>
 
 #include "whisp-cli/logging.h"
