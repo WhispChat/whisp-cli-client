@@ -128,6 +128,10 @@ void MainWindow::show_new_message(std::string message) {
 void MainWindow::send_message() {
   std::string content = chat_input_box->text().toStdString();
 
+  if (content.compare("") == 0) {
+    return;
+  }
+
   client::Message msg;
   msg.set_content(content);
 
