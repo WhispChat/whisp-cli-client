@@ -18,12 +18,15 @@ include(FindProtobuf)
 find_package(Protobuf REQUIRED)
 include_directories(${PROTOBUF_INCLUDE_DIR})
 
+find_package(Qt5 COMPONENTS Core Widgets REQUIRED)
+include_directories(${Qt5Widgets_INCLUDE_DIRS})
+add_definitions(-fPIC)
+
 find_package(OpenSSL REQUIRED)
 
 if(WIN32)
-  target_link_libraries(whisp-cli
-    PRIVATE Threads::Threads whisp-cli-lib ws2_32 ${PROTOBUF_LIBRARY} OpenSSL::SSL)
-else()
-  target_link_libraries(whisp-cli
-    PRIVATE Threads::Threads whisp-cli-lib ${PROTOBUF_LIBRARY} OpenSSL::SSL)
+  target_link_libraries(whisp-cli PRIVATE ws2_32)
 endif()
+
+target_link_libraries(whisp-cli
+  PRIVATE Threads::Threads whisp-cli-lib ${PROTOBUF_LIBRARY} OpenSSL::SSL Qt5::Widgets)
