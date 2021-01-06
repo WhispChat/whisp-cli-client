@@ -99,8 +99,8 @@ void MainWindow::initialize_layout() {
   layout->addWidget(chat_text);
 
   // chat input box
-  QGroupBox *chat_input = new QGroupBox;
   QHBoxLayout *chat_input_layout = new QHBoxLayout;
+  QGroupBox *chat_input = new QGroupBox;
 
   chat_input_box = new QLineEdit;
   chat_input_box->resize(width(), chat_input->height());
