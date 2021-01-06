@@ -18,6 +18,10 @@
 #include <openssl/err.h>
 #include <openssl/ssl.h>
 
+#include "whisp-protobuf/cpp/client.pb.h"
+#include "whisp-protobuf/cpp/server.pb.h"
+#include "whisp-protobuf/cpp/user.pb.h"
+
 class MainWindow : public QWidget {
 public:
   MainWindow(std::string server_host, int server_port);
@@ -29,6 +33,10 @@ private:
   void initialize_layout();
   void show_new_message(std::string message);
   void send_message();
+  std::string format_message(client::Message user_msg);
+  std::string format_message(user::PrivateMessageIn private_msg);
+  std::string format_message(user::PrivateMessageOut private_msg);
+  std::string format_message(server::Message msg);
   void read_server();
 
   SSL_CTX *ssl_ctx;

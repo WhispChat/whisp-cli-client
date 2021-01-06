@@ -1,12 +1,11 @@
 #include <google/protobuf/any.pb.h>
+#include <google/protobuf/util/time_util.h>
 #include <iostream>
 #include <sstream>
 #include <thread>
 
 #include "whisp-cli/logging.h"
 #include "whisp-cli/mainwindow.h"
-#include "whisp-protobuf/cpp/client.pb.h"
-#include "whisp-protobuf/cpp/server.pb.h"
 
 MainWindow::MainWindow(std::string server_host, int server_port) {
   this->server_host = server_host;
@@ -146,6 +145,74 @@ void MainWindow::send_message() {
   chat_input_box->setText("");
 }
 
+std::string MainWindow::format_message(client::Message user_msg) {
+  std::stringstream msg_str;
+
+  if (user_msg.has_registered_user()) {
+    msg_str << "[<strong>" << user_msg.registered_user().username()
+            << "</strong>]: " << user_msg.content();
+  } else if (user_msg.has_guest_user()) {
+    msg_str << "[" << user_msg.guest_user().username()
+            << " (guest)]: " << user_msg.content();
+  }
+
+  return msg_str.str();
+}
+
+std::string MainWindow::format_message(user::PrivateMessageIn private_msg) {
+  std::stringstream msg_str;
+
+  msg_str << "<p style=\"color: #707070\">";
+  if (private_msg.has_registered_user()) {
+    msg_str << "[<strong>" << private_msg.registered_user().username()
+            << "</strong>] whispers: " << private_msg.content();
+  } else if (private_msg.has_guest_user()) {
+    msg_str << "[" << private_msg.guest_user().username()
+            << " (guest)] whispers: " << private_msg.content();
+  }
+  msg_str << "</p>";
+
+  return msg_str.str();
+}
+
+std::string MainWindow::format_message(user::PrivateMessageOut private_msg) {
+  std::stringstream msg_str;
+
+  msg_str << "<p style=\"color: #707070\">";
+  if (private_msg.has_registered_user()) {
+    msg_str << "you whisper to [<strong>"
+            << private_msg.registered_user().username()
+            << "</strong>]: " << private_msg.content();
+  } else if (private_msg.has_guest_user()) {
+    msg_str << "you whisper to [" << private_msg.guest_user().username()
+            << " (guest)]: " << private_msg.content();
+  }
+  msg_str << "</p>";
+
+  return msg_str.str();
+}
+
+std::string MainWindow::format_message(server::Message msg) {
+  std::stringstream msg_str;
+
+  msg_str << "<em>";
+  switch (msg.type()) {
+  case server::Message::INFO:
+    msg_str << "[INFO ] ";
+    break;
+  case server::Message::ERROR:
+    msg_str << "[ERROR] ";
+    break;
+  case server::Message::DEBUG:
+    msg_str << "[DEBUG] ";
+    break;
+  }
+  msg_str << msg.content();
+  msg_str << "</em>";
+
+  return msg_str.str();
+}
+
 void MainWindow::read_server() {
   char buffer[4096];
 
@@ -160,13 +227,19 @@ void MainWindow::read_server() {
       client::Message user_msg;
       any.UnpackTo(&user_msg);
 
-      if (user_msg.has_registered_user()) {
-        chat_message << "[<strong>" << user_msg.registered_user().username()
-                     << "</strong>]: " << user_msg.content();
-      } else if (user_msg.has_guest_user()) {
-        chat_message << "[" << user_msg.guest_user().username()
-                     << " (guest)]: " << user_msg.content();
-      }
+      chat_message << format_message(user_msg);
+      show_new_message(chat_message.str());
+    } else if (any.Is<user::PrivateMessageIn>()) {
+      user::PrivateMessageIn private_msg;
+      any.UnpackTo(&private_msg);
+
+      chat_message << format_message(private_msg);
+      show_new_message(chat_message.str());
+    } else if (any.Is<user::PrivateMessageOut>()) {
+      user::PrivateMessageOut private_msg;
+      any.UnpackTo(&private_msg);
+
+      chat_message << format_message(private_msg);
       show_new_message(chat_message.str());
     } else if (any.Is<server::Status>()) {
       server::Status status;
@@ -178,8 +251,7 @@ void MainWindow::read_server() {
                      << status.max_connections() << ")";
 
         show_new_message(chat_message.str());
-        cleanup();
-        exit(EXIT_FAILURE);
+        return;
       }
 
       chat_message << "Connected to " << server_host << ":" << server_port
@@ -192,20 +264,7 @@ void MainWindow::read_server() {
       server::Message msg;
       any.UnpackTo(&msg);
 
-      chat_message << "<em>";
-      switch (msg.type()) {
-      case server::Message::INFO:
-        chat_message << "[INFO ] ";
-        break;
-      case server::Message::ERROR:
-        chat_message << "[ERROR] ";
-        break;
-      case server::Message::DEBUG:
-        chat_message << "[DEBUG] ";
-        break;
-      }
-      chat_message << msg.content();
-      chat_message << "</em>";
+      chat_message << format_message(msg);
       show_new_message(chat_message.str());
     } else if (any.Is<server::ServerClosed>()) {
       chat_message << "<em>[INFO]"
